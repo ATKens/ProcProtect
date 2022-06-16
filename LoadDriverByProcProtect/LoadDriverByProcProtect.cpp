@@ -3,14 +3,14 @@
 
 #include <iostream>
 #include <windows.h>
-
+#define PROTECT_NAME "RTCDesktopCaptureStream.exes"
 
 EXTERN_C BOOL __cdecl LoadNTDriver(char* lpszDriverName, char* lpszDriverPath)
 {
 	char szDriverImagePath[256];
 	//得到完整的驱动路径
 	GetFullPathNameA(lpszDriverPath, 256, szDriverImagePath, NULL);
-
+	printf("FullPathName:%s\n", szDriverImagePath);
 	BOOL bRet = FALSE;
 
 	SC_HANDLE hServiceMgr = NULL;//SCM管理器的句柄
@@ -204,10 +204,9 @@ BeforeLeave:
 
 int main()
 {
-	
-
 	BOOL loadDriverRetVal = LoadNTDriver((char*)"ProcProtect", (char*)"ProcProtect.sys");
 	int error_code = GetLastError();
+	printf("error_code:%d\n",error_code);
 	HANDLE drvhandle = CreateFileA("\\\\.\\ProcProtect",
 		GENERIC_WRITE | GENERIC_READ,
 		0,
@@ -217,8 +216,9 @@ int main()
 		NULL);
 
 	error_code = GetLastError();
-	Sleep(50000);
-	//CloseHandle(drvhandle);
-	//UnloadNTDriver((char*)"ProcProtect");
+	printf("error_code:%d\n", error_code);
+	//Sleep(50000);
+	CloseHandle(drvhandle);
+	UnloadNTDriver((char*)"ProcProtect");
 }
 

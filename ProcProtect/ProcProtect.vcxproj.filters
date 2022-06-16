@@ -17,10 +17,18 @@
       <UniqueIdentifier>{8E41214B-6785-4CFE-B992-037D68949A14}</UniqueIdentifier>
       <Extensions>inf;inv;inx;mof;mc;</Extensions>
     </Filter>
+    <Filter Include="ASM">
+      <UniqueIdentifier>{01f5ac5e-bfe9-4524-87e8-30d6fa792c7e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ppsource.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="AsmInt3.asm">
+      <Filter>ASM</Filter>
+    </MASM>
   </ItemGroup>
 </Project>

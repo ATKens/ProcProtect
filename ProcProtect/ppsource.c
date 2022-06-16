@@ -1,10 +1,16 @@
+/*
+
+Version needs to be greater than Windows 10 | 2016
+1909 19H2 (November 2019 Update), otherwise it will bsod .
+
+*/
+
 #include <ntifs.h>
-
-#define PROTECT_NAME "Calculator.exe"
-
+#define PROTECT_NAME "RTCDesktop.exe"   //长度不大于10
+//RTCDesktop
 ULONG_PTR g_save_pid = 0;
 
-
+EXTERN_C void AsmInt3();
 PUCHAR PsGetProcessImageFileName(__in PEPROCESS Process);
 
 
@@ -58,8 +64,17 @@ typedef   enum   _SHUTDOWN_ACTION {
 }SHUTDOWN_ACTION;
 
 
+
+
+
+
+
+
 NTSTATUS NTAPI NtShutdownSystem(IN SHUTDOWN_ACTION Action);
 
+
+
+/*
 #define Delay_One_MicroSecond (-10)
 #define Delay_One_MilliSecond (Delay_One_MicroSecond * 1000)
 void MySleep(LONG msec)
@@ -68,7 +83,17 @@ void MySleep(LONG msec)
 	li.QuadPart = Delay_One_MilliSecond;
 	li.QuadPart *= msec;
 	KeDelayExecutionThread(KernelMode, 0, &li);
+}*/
+
+
+EXTERN_C NTSTATUS LogpSleep(_In_ LONG Millisecond) {
+	PAGED_CODE();
+
+	LARGE_INTEGER interval = {0};
+	interval.QuadPart = -(10000 * Millisecond);  // msec
+	return KeDelayExecutionThread(KernelMode, FALSE, &interval);
 }
+
 
 VOID IsFun()
 {
@@ -78,25 +103,38 @@ VOID IsFun()
 		ULONG i = 0;
 		PEPROCESS pEProcess = NULL;
 		PCHAR pszProcessName = NULL;
+		
+		
+
 		// 开始遍历
 		for (i = 4; i < 0x10000; i = i + 4)
 		{
 			status = PsLookupProcessByProcessId((HANDLE)i, &pEProcess);
 			if (NT_SUCCESS(status))
-			{
+			{	
 				pszProcessName = PsGetProcessImageFileName(pEProcess);
-				if (0 == _stricmp(pszProcessName, PROTECT_NAME))
+				
+				
+				
+				if (strcmp(pszProcessName, PROTECT_NAME) == 0)
 				{
+
 					i = 4;
 				}
+				
+				/*
+				if (sizeof(PROTECT_NAME) - 1 <= RtlCompareMemory(pszProcessName, PROTECT_NAME,sizeof(PROTECT_NAME)-1))
+				{
+					i = 4;
+				}*/
 
+				
 				ObDereferenceObject(pEProcess);
 			}
-			MySleep(50);
+			LogpSleep(5);
+			
 		}
 		
-	
-
 		//重启
 		NtShutdownSystem(ShutdownReboot);
 
@@ -105,8 +143,6 @@ VOID IsFun()
 
 VOID IsProcessActive()
 {
-	
-
 
 	HANDLE hThread;
 	PVOID objtowait = 0;
@@ -155,7 +191,6 @@ VOID DriverUnload(PDRIVER_OBJECT pDriver)
 	KdPrint(("驱动正在被关闭\n"));
 	// 卸载驱动
 
-	
 	if (NULL != pRegistrationHandle)
 	{
 		KdPrint(("卸载回调成功\n"));
@@ -211,6 +246,9 @@ OB_PREOP_CALLBACK_STATUS PreProcessHandle(
 			return OB_PREOP_SUCCESS;
 		}
 		
+
+
+		
 			if (g_save_pid == 0)
 			{ 
 				g_save_pid = *((PULONG_PTR)((ULONG_PTR)(pEProcess)+0x440));
@@ -227,7 +265,7 @@ OB_PREOP_CALLBACK_STATUS PreProcessHandle(
 				}
 
 			}
-
+			
 	}
 
 
@@ -269,6 +307,9 @@ OB_PREOP_CALLBACK_STATUS PreProcessHandle(
 
 NTSTATUS DriverEntry(PDRIVER_OBJECT pDriver, PUNICODE_STRING reg_path)
 {
+#if DBG
+	AsmInt3();
+#endif
 	DbgPrint("驱动正在被启动\n");
 
 	OB_OPERATION_REGISTRATION oor;
@@ -305,11 +346,11 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDriver, PUNICODE_STRING reg_path)
 	RtlInitUnicodeString(&ocr.Altitude, L"321000"); // 设置加载顺序
 
 
-#if DBG
+
 	// 绕过MmVerifyCallbackFunction。
 	pld = (PLDR_DATA)pDriver->DriverSection;
 	pld->Flags |= 0x20;
-#endif
+
 
 	if (NT_SUCCESS(ObRegisterCallbacks(&ocr, &pRegistrationHandle)))
 	{
@@ -320,7 +361,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDriver, PUNICODE_STRING reg_path)
 		KdPrint(("ObRegisterCallbacks失败"));
 	}
 
-
+	IsProcessActive();
 	// 指定卸载函数
 	pDriver->DriverUnload = DriverUnload;
 	return STATUS_SUCCESS;
